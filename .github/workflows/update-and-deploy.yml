@@ -33,16 +33,6 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
         run: node scripts/build.js
 
-      # Move everything into site/ (JSON + HTML)
-      - name: Prepare site folder
-        run: |
-          mkdir -p site
-          # move JSON if script didn’t already put them there
-          [ -f translations.json ] && mv translations.json site/translations.json
-          [ -f interpretation.json ] && mv interpretation.json site/interpretation.json
-          # copy HTML pages
-          cp -r src/*.html site/ || true
-
       - uses: actions/configure-pages@v4
 
       - uses: actions/upload-pages-artifact@v3
