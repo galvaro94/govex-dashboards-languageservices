@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Language Services · Interpretation</title>
+<style>
+  :root{
+    --brand-bg-start:#0b3b74;
+    --brand-bg-end:#6a2c91;
+    --brand-accent:#5eead4;
+    --text:#e6eef8;
+    --muted:#9fb3c8;
+    --card:rgba(255,255,255,.06);
+    --card-border:rgba(255,255,255,.14);
+    --chip:rgba(255,255,255,.12);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif;
+    color:var(--text);
+    background:linear-gradient(140deg,var(--brand-bg-start),var(--brand-bg-end));
+    background-attachment:fixed;
+  }
+  .container{max-width:1200px;margin:0 auto;padding:24px}
+  a{color:var(--brand-accent);text-decoration:none}
+
+  .topbar{position:sticky;top:0;z-index:40;background:linear-gradient(140deg,var(--brand-bg-start),var(--brand-bg-end));border-bottom:1px solid var(--card-border);backdrop-filter:saturate(180%) blur(8px)}
+  .row{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+  .space{flex:1}
+  .title{font-weight:700;font-size:20px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--card-border);background:var(--chip);color:var(--text);font-size:12px}
+  .input, select{background:var(--card);border:1px solid var(--card-border);color:var(--text);border-radius:10px;padding:10px 12px;outline:0;min-width:170px}
+  .search{min-width:260px;flex:1}
+  .btn{appearance:none;border:1px solid var(--card-border);background:var(--chip);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer}
+  .grid{display:grid;gap:16px;margin-top:18px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  .card{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:16px}
+  .card h3{margin:0 0 6px 0;font-size:16px}
+  .sub{color:var(--muted);font-size:13px}
+  .row-between{display:flex;justify-content:space-between;gap:8px}
+  .chip{border:1px solid var(--card-border);background:var(--chip);padding:4px 10px;border-radius:999px;font-size:12px}
+  .counts{display:flex;gap:10px;flex-wrap:wrap}
+  .count{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:8px 12px;font-size:13px}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="container row" style="padding:12px 24px">
+      <div class="title">Language Services — Interpretation</div>
+      <span id="lastUpdated" class="pill">Last updated: —</span>
+      <div class="space"></div>
+      <input id="q" class="input search" placeholder="Search event, program, language/type, interpreter…" />
+      <select id="programSel"></select>
+      <select id="langSel" title="Language/Type"></select>
+      <select id="statusSel" title="Status"></select>
+      <input id="dateSel" class="input" type="date" />
+      <a class="btn" href="./" title="Back to Translations">← Translations</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="counts" id="counts"></div>
+    <div id="cards" class="grid"></div>
+  </div>
+
+<script>
+(async function(){
+  const res = await fetch('./interpretation.json',{cache:'no-store'});
+  const data = await res.json();
+
+  const lastUpdated = document.getElementById('lastUpdated');
+  const q = document.getElementById('q');
+  const programSel = document.getElementById('programSel');
+  const langSel = document.getElementById('langSel');
+  const statusSel = document.getElementById('statusSel');
+  const dateSel = document.getElementById('dateSel');
+  const cards = document.getElementById('cards');
+  const counts = document.getElementById('counts');
+
+  lastUpdated.textContent = 'Last updated: ' + new Date().toLocaleString();
+
+  const programs = ['All programs', ...Array.from(new Set(data.map(d=>d.program).filter(Boolean))).sort()];
+  const langs = ['All types', ...Array.from(new Set(data.map(d=>d.languageType).filter(Boolean))).sort()];
+  const statuses = ['All status', ...Array.from(new Set(data.map(d=>d.status).filter(Boolean))).sort()];
+
+  programSel.innerHTML = programs.map(v=>`<option>${v}</option>`).join('');
+  langSel.innerHTML = langs.map(v=>`<option>${v}</option>`).join('');
+  statusSel.innerHTML = statuses.map(v=>`<option>${v}</option>`).join('');
+
+  const norm = s => (s||'').toString().toLowerCase();
+
+  function pass(d){
+    const s = norm(q.value);
+    const bySearch = !s || [d.eventName,d.program,d.languageType,d.interpreter,d.status].some(x=>norm(x).includes(s));
+    const byProgram = programSel.value==='All programs' || d.program===programSel.value;
+    const byLang = langSel.value==='All types' || d.languageType===langSel.value;
+    const byStatus = statusSel.value==='All status' || d.status===statusSel.value;
+    const byDate = !dateSel.value || (d.eventDate && new Date(d.eventDate) >= new Date(dateSel.value));
+    return bySearch && byProgram && byLang && byStatus && byDate;
+  }
+
+  function render(){
+    const rows = data.filter(pass).sort((a,b)=>{
+      const ad = a.eventDate? new Date(a.eventDate) : new Date(0);
+      const bd = b.eventDate? new Date(b.eventDate) : new Date(0);
+      return ad - bd;
+    });
+
+    counts.innerHTML = `<div class="count">Showing <b>${rows.length}</b> of ${data.length} requests</div>`;
+
+    cards.innerHTML = rows.map(d=>`
+      <article class="card">
+        <div class="row-between">
+          <h3>${d.eventName || '(Untitled event)'}</h3>
+          <span class="chip">${d.status || ''}</span>
+        </div>
+        <div class="sub">${d.program || ''} • ${d.languageType || ''}</div>
+        <div class="sub">Date: ${d.eventDate || '—'} • Time: ${d.eventTime || '—'}</div>
+        <div class="sub">Interpreter: ${d.interpreter || 'TBD'}</div>
+      </article>
+    `).join('');
+  }
+
+  let t; q.addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(render,120); });
+  [programSel,langSel,statusSel,dateSel].forEach(el=>el.onchange=render);
+
+  render();
+})();
+</script>
+</body>
+</html>
