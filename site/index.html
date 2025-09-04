@@ -4,7 +4,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Translations Dashboard</title>
-
 <style>
   :root{
     --brand-bg:#0e1431; --brand-surface:#121a3a; --brand-accent:#7c4dff;
@@ -14,11 +13,22 @@
     --status-pending-bg:#5a1a1a; --status-pending-text:#ffccd0;
   }
   body{margin:0;background:var(--brand-bg);color:var(--brand-text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;}
+  a{color:#b9a7ff}
   .wrap{max-width:1100px;margin:auto;padding:28px 20px;}
-  .title{font-size:32px;font-weight:800;margin:0 0 22px}
+  .title{font-size:32px;font-weight:800;margin:4px 0 6px}
+  .subhead{color:var(--brand-muted);font-size:13px;margin:0 0 18px}
   .controls{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}
   .select,.search{background:var(--brand-surface);border:1px solid var(--brand-muted);color:var(--brand-text);border-radius:10px;padding:10px 12px}
   .search{min-width:260px}
+  .summaryGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:14px 0 18px}
+  .summaryCard{background:var(--brand-surface);border:1px solid #ffffff22;border-radius:14px;padding:14px;text-align:center}
+  .summaryCard h4{margin:0 0 4px;font-size:13px;color:var(--brand-muted)}
+  .summaryCard div{font-size:22px;font-weight:700}
+  .next7{background:var(--brand-surface);border:1px solid #ffffff22;border-radius:14px;padding:14px;margin:8px 0 18px}
+  .next7 h3{margin:0 0 8px;font-size:16px}
+  .nextItem{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid #ffffff1a}
+  .nextItem:first-of-type{border-top:0}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;font-size:12px;border:1px solid #ffffff33}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
   .card{background:var(--brand-surface);border:1px solid #ffffff22;border-radius:14px;padding:14px;box-shadow:0 4px 16px #00000026}
   .card h3{margin:0 0 6px;font-size:18px}
@@ -31,16 +41,13 @@
   .btn{display:inline-flex;align-items:center;gap:8px;background:var(--brand-accent);color:white;border:0;border-radius:10px;padding:10px 12px;font-weight:600;cursor:pointer}
   .btn:disabled{opacity:.5;cursor:not-allowed}
   .muted{color:var(--brand-muted)}
-  .summaryGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:20px 0}
-  .summaryCard{background:var(--brand-surface);border:1px solid #ffffff22;border-radius:14px;padding:14px;text-align:center}
-  .summaryCard h4{margin:0 0 4px;font-size:13px;color:var(--brand-muted)}
-  .summaryCard div{font-size:22px;font-weight:700}
 </style>
 </head>
 <body>
 <div class="wrap">
   <a href="./interpretation.html">Go to Interpretation »</a>
   <h1 class="title">Translations Dashboard</h1>
+  <p id="last" class="subhead">Last updated: —</p>
 
   <div class="controls">
     <select id="program" class="select"><option value="all">All Programs</option></select>
@@ -54,37 +61,58 @@
   </div>
 
   <div id="summary" class="summaryGrid"></div>
+
+  <div id="next7" class="next7" hidden>
+    <h3>Due in the next 7 days</h3>
+    <div id="next7List"></div>
+  </div>
+
   <div id="grid" class="grid"></div>
 </div>
 
 <script>
 (async function(){
+  function parseDate(v){
+    if(!v) return null;
+    const d=new Date(v);
+    if(!isNaN(d)) return d;
+    // Try MM/DD/YYYY
+    const m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if(m){ return new Date(+m[3] < 100 ? 2000+ +m[3] : +m[3], m[1]-1, +m[2]); }
+    return null;
+  }
+  function daysUntil(d){const t=new Date();t.setHours(0,0,0,0);d.setHours(0,0,0,0);return Math.round((d-t)/86400000);}
+  function statusClass(s){const v=(s||'').toLowerCase();if(v.includes('complete'))return'pill pill--completed';if(v.includes('progress'))return'pill pill--inprogress';return'pill pill--pending'}
+  function matches(d,q){if(!q)return true;q=q.toLowerCase();return[d.title,d.program,d.language,d.status].some(x=>(x||'').toLowerCase().includes(q))}
+
   const res = await fetch('./translations.json',{cache:'no-store'});
   const data = await res.json();
+
+  // Last updated from header
+  const lm = res.headers.get('last-modified');
+  document.getElementById('last').textContent =
+    'Last updated: ' + (lm ? new Date(lm).toLocaleString() : new Date().toLocaleString());
 
   const $grid=document.getElementById('grid');
   const $program=document.getElementById('program');
   const $status=document.getElementById('status');
   const $search=document.getElementById('search');
   const $summary=document.getElementById('summary');
+  const $nextBox=document.getElementById('next7');
+  const $nextList=document.getElementById('next7List');
 
   const programs=[...new Set(data.map(d=>d.program).filter(Boolean))].sort();
   programs.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;$program.appendChild(o)});
-
-  function statusClass(s){const v=(s||'').toLowerCase();if(v.includes('complete'))return'pill pill--completed';if(v.includes('progress'))return'pill pill--inprogress';return'pill pill--pending'}
-
-  function matches(d,q){if(!q)return true;q=q.toLowerCase();return[d.title,d.program,d.language,d.status].some(x=>(x||'').toLowerCase().includes(q))}
 
   function render(){
     const p=$program.value,s=$status.value,q=$search.value.trim();
     const filtered=data.filter(d=>(p==='all'||d.program===p)&&(s==='all'||(d.status||'').toLowerCase()===s.toLowerCase())&&matches(d,q));
 
-    // summary stats
+    // summary
     const total=filtered.length;
     const completed=filtered.filter(d=>(d.status||'').toLowerCase()==='completed').length;
     const inprog=filtered.filter(d=>(d.status||'').toLowerCase()==='in progress').length;
     const pending=filtered.filter(d=>(d.status||'').toLowerCase()==='pending').length;
-
     $summary.innerHTML=`
       <div class="summaryCard"><h4>Total</h4><div>${total}</div></div>
       <div class="summaryCard"><h4>Completed</h4><div style="color:var(--status-completed-text)">${completed}</div></div>
@@ -92,6 +120,32 @@
       <div class="summaryCard"><h4>Pending</h4><div style="color:var(--status-pending-text)">${pending}</div></div>
     `;
 
+    // next 7 days (by deadline or date)
+    const upcoming = filtered
+      .map(d=>({ ...d, due: parseDate(d.deadline||d.date) }))
+      .filter(d=> d.due && daysUntil(d.due) >= 0 && daysUntil(d.due) <= 7 && (d.status||'').toLowerCase()!=='completed')
+      .sort((a,b)=>a.due-b.due);
+
+    if(upcoming.length){
+      $nextBox.hidden=false;
+      $nextList.innerHTML = upcoming.slice(0,8).map(d=>`
+        <div class="nextItem">
+          <div>
+            <strong>${d.title||'Untitled'}</strong>
+            <div class="muted">${d.program||'—'} • ${d.language||'—'}</div>
+          </div>
+          <div>
+            <span class="${statusClass(d.status)}">${d.status||'Pending'}</span><br/>
+            <span class="muted">${d.due.toLocaleDateString()}</span>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      $nextBox.hidden=true;
+      $nextList.innerHTML='';
+    }
+
+    // cards
     $grid.innerHTML='';
     filtered.forEach(d=>{
       const card=document.createElement('div');card.className='card';
@@ -102,7 +156,7 @@
         <div class="row"><span class="muted">Requested:</span><strong>${d.dateRequested||'—'}</strong></div>
         <div class="row"><span class="muted">Deadline:</span><strong>${d.deadline||d.date||'—'}</strong></div>
         <div style="margin-top:10px;">
-          ${d.link?`<a class="btn" href="${d.link}" target="_blank">View File</a>`:`<button class="btn" disabled>No link</button>`}
+          ${d.link?`<a class="btn" href="${d.link}" target="_blank" rel="noopener">View File</a>`:`<button class="btn" disabled>No link</button>`}
         </div>`;
       $grid.appendChild(card);
     });
