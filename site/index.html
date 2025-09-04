@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Language Services · Translations</title>
+<style>
+  /* ==== BRAND COLORS (edit these three to match your brand) ==== */
+  :root{
+    --brand-bg-start:#0b3b74;   /* deep navy */
+    --brand-bg-end:#6a2c91;     /* purple */
+    --brand-accent:#5eead4;     /* teal accent */
+    --text:#e6eef8;
+    --muted:#9fb3c8;
+    --card:rgba(255,255,255,.06);
+    --card-border:rgba(255,255,255,.14);
+    --chip:rgba(255,255,255,.12);
+  }
+
+  /* ==== Base layout ==== */
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif;
+    color:var(--text);
+    background:linear-gradient(140deg,var(--brand-bg-start),var(--brand-bg-end));
+    background-attachment:fixed;
+  }
+  .container{max-width:1200px;margin:0 auto;padding:24px}
+  a{color:var(--brand-accent);text-decoration:none}
+
+  /* ==== Header / toolbar ==== */
+  .topbar{
+    position:sticky;top:0;z-index:40;
+    backdrop-filter:saturate(180%) blur(8px);
+    background:linear-gradient(140deg,var(--brand-bg-start),var(--brand-bg-end));
+    border-bottom:1px solid var(--card-border);
+  }
+  .row{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+  .space{flex:1}
+  .title{font-weight:700;font-size:20px;letter-spacing:.2px}
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 10px;border-radius:999px;
+    border:1px solid var(--card-border);background:var(--chip);color:var(--text);font-size:12px
+  }
+  .input, select{
+    background:var(--card);border:1px solid var(--card-border);color:var(--text);
+    border-radius:10px;padding:10px 12px;outline:0;min-width:180px
+  }
+  .search{min-width:260px;flex:1}
+  .btn{
+    appearance:none;border:1px solid var(--card-border);background:var(--chip);color:var(--text);
+    border-radius:10px;padding:10px 12px;cursor:pointer
+  }
+  .btn:hover{border-color:#ffffff38}
+
+  /* ==== Cards grid ==== */
+  .grid{
+    display:grid;gap:16px;margin-top:18px;
+    grid-template-columns:repeat(auto-fill,minmax(300px,1fr))
+  }
+  .card{
+    background:var(--card);border:1px solid var(--card-border);
+    border-radius:16px;padding:16px
+  }
+  .card h3{margin:0 0 6px 0;font-size:16px}
+  .sub{color:var(--muted);font-size:13px}
+  .row-between{display:flex;justify-content:space-between;gap:8px}
+  .chip{
+    border:1px solid var(--card-border);background:var(--chip);padding:4px 10px;border-radius:999px;font-size:12px
+  }
+  .footer{margin-top:22px;font-size:13px;color:var(--muted)}
+  .counts{display:flex;gap:10px;flex-wrap:wrap}
+  .count{
+    background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:8px 12px;font-size:13px
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="container row" style="padding:12px 24px">
+      <div class="title">Language Services — Translations</div>
+      <span id="lastUpdated" class="pill">Last updated: —</span>
+      <div class="space"></div>
+      <input id="q" class="input search" placeholder="Search title, program, language…" />
+      <select id="programSel" title="Program"></select>
+      <select id="statusSel" title="Status"></select>
+      <a class="btn" href="./interpretation.html" title="Go to Interpretation">Interpretation →</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="counts" id="counts"></div>
+    <div id="cards" class="grid"></div>
+    <div class="footer">Tip: use the search to filter across <em>Title • Program • Language • Status</em>.</div>
+  </div>
+
+<script>
+(async function(){
+  // Load data
+  const res = await fetch('./translations.json',{cache:'no-store'});
+  const data = await res.json();
+
+  // Elements
+  const lastUpdated = document.getElementById('lastUpdated');
+  const q = document.getElementById('q');
+  const programSel = document.getElementById('programSel');
+  const statusSel = document.getElementById('statusSel');
+  const cards = document.getElementById('cards');
+  const counts = document.getElementById('counts');
+
+  lastUpdated.textContent = 'Last updated: ' + new Date().toLocaleString();
+
+  // Build filter options
+  const programs = ['All programs', ...Array.from(new Set(data.map(d=>d.program).filter(Boolean))).sort()];
+  const statuses = ['All status', ...Array.from(new Set(data.map(d=>d.status).filter(Boolean))).sort()];
+
+  programSel.innerHTML = programs.map(v=>`<option>${v}</option>`).join('');
+  statusSel.innerHTML = statuses.map(v=>`<option>${v}</option>`).join('');
+
+  // Filter + search
+  const norm = s => (s||'').toString().toLowerCase();
+  function pass(d){
+    const s = norm(q.value);
+    const bySearch = !s || [d.title,d.program,d.language,d.status].some(x=>norm(x).includes(s));
+    const byProgram = programSel.value==='All programs' || d.program===programSel.value;
+    const byStatus = statusSel.value==='All status' || d.status===statusSel.value;
+    return bySearch && byProgram && byStatus;
+  }
+
+  function render(){
+    const rows = data.filter(pass);
+
+    // counts
+    const total = data.length;
+    const completed = data.filter(x=>norm(x.status)==='completed').length;
+    const inprog = data.filter(x=>norm(x.status)==='in progress').length;
+    const pending = data.filter(x=>norm(x.status)==='pending').length;
+    counts.innerHTML = `
+      <div class="count">Showing <b>${rows.length}</b> of ${total}</div>
+      <div class="count">Completed: <b>${completed}</b></div>
+      <div class="count">In progress: <b>${inprog}</b></div>
+      <div class="count">Pending: <b>${pending}</b></div>
+    `;
+
+    // cards
+    cards.innerHTML = rows.map(d=>`
+      <article class="card">
+        <div class="row-between">
+          <h3>${d.title || '(Untitled)'}</h3>
+          <span class="chip">${d.status || ''}</span>
+        </div>
+        <div class="sub">${d.program || ''} • ${d.language || ''}</div>
+        <div class="sub">Requested: ${d.dateRequested || '—'} • Deadline: ${d.deadline || '—'}</div>
+        ${d.link ? `<div style="margin-top:10px"><a class="btn" target="_blank" href="${d.link}">Open file</a></div>`:''}
+      </article>
+    `).join('');
+  }
+
+  // Events (with small debounce for search)
+  let t; q.addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(render,120); });
+  programSel.onchange = render;
+  statusSel.onchange = render;
+
+  render();
+})();
+</script>
+</body>
+</html>
