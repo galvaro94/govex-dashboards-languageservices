@@ -19,19 +19,35 @@ jobs:
       name: github-pages
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
+
       - name: Install deps (API clients only)
         run: npm install googleapis@131 google-auth-library@9.14.2
+
       - name: Build data & pages
         env:
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
         run: node scripts/build.js
+
+      # Move everything into site/ (JSON + HTML)
+      - name: Prepare site folder
+        run: |
+          mkdir -p site
+          # move JSON if script didn’t already put them there
+          [ -f translations.json ] && mv translations.json site/translations.json
+          [ -f interpretation.json ] && mv interpretation.json site/interpretation.json
+          # copy HTML pages
+          cp -r src/*.html site/ || true
+
       - uses: actions/configure-pages@v4
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./src
+          path: site
+
       - id: deploy
         uses: actions/deploy-pages@v4
