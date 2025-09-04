@@ -5,152 +5,110 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Translations Dashboard</title>
 
-<!-- Brandable theme variables -->
 <style>
   :root{
-    /* 🔧 Set these to your brand */
-    --brand-bg: #0e1431;          /* page background */
-    --brand-surface: #121a3a;     /* cards */
-    --brand-accent: #7c4dff;      /* accent/buttons/links */
-    --brand-text: #e7ecf7;        /* primary text */
-    --brand-muted: #a9b2c7;       /* secondary text/borders */
-
-    /* Status chips (brand-aligned) */
-    --status-completed-bg:#0f5132; --status-completed-text:#d1f7df; /* green */
-    --status-inprogress-bg:#5c5100; --status-inprogress-text:#fff7b3; /* yellow */
-    --status-pending-bg:#5a1a1a; --status-pending-text:#ffccd0; /* red */
+    --brand-bg:#0e1431; --brand-surface:#121a3a; --brand-accent:#7c4dff;
+    --brand-text:#e7ecf7; --brand-muted:#a9b2c7;
+    --status-completed-bg:#0f5132; --status-completed-text:#d1f7df;
+    --status-inprogress-bg:#5c5100; --status-inprogress-text:#fff7b3;
+    --status-pending-bg:#5a1a1a; --status-pending-text:#ffccd0;
   }
-
-  /* Layout */
   body{margin:0;background:var(--brand-bg);color:var(--brand-text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;}
   .wrap{max-width:1100px;margin:auto;padding:28px 20px;}
-  a{color:var(--brand-accent);text-decoration:none;}
-  a:hover{text-decoration:underline;}
-
-  /* Header */
-  .topbar{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
-  .title{font-size:32px;font-weight:800;letter-spacing:.3px;margin:0 0 22px;}
-
-  /* Controls */
-  .controls{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px;}
+  .title{font-size:32px;font-weight:800;margin:0 0 22px}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}
   .select,.search{background:var(--brand-surface);border:1px solid var(--brand-muted);color:var(--brand-text);border-radius:10px;padding:10px 12px}
   .search{min-width:260px}
-
-  /* Cards */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
   .card{background:var(--brand-surface);border:1px solid #ffffff22;border-radius:14px;padding:14px;box-shadow:0 4px 16px #00000026}
   .card h3{margin:0 0 6px;font-size:18px}
   .sub{color:var(--brand-muted);font-size:13px;margin-bottom:10px}
   .row{display:flex;gap:10px;align-items:center;margin:4px 0;font-size:14px}
-
   .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;font-size:12px;border:1px solid #ffffff33}
   .pill--completed{background:var(--status-completed-bg);color:var(--status-completed-text)}
   .pill--inprogress{background:var(--status-inprogress-bg);color:var(--status-inprogress-text)}
   .pill--pending{background:var(--status-pending-bg);color:var(--status-pending-text)}
-
   .btn{display:inline-flex;align-items:center;gap:8px;background:var(--brand-accent);color:white;border:0;border-radius:10px;padding:10px 12px;font-weight:600;cursor:pointer}
   .btn:disabled{opacity:.5;cursor:not-allowed}
   .muted{color:var(--brand-muted)}
+  .summaryGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:20px 0}
+  .summaryCard{background:var(--brand-surface);border:1px solid #ffffff22;border-radius:14px;padding:14px;text-align:center}
+  .summaryCard h4{margin:0 0 4px;font-size:13px;color:var(--brand-muted)}
+  .summaryCard div{font-size:22px;font-weight:700}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="topbar">
-      <a href="./interpretation.html">Go to Interpretation »</a>
-    </div>
+<div class="wrap">
+  <a href="./interpretation.html">Go to Interpretation »</a>
+  <h1 class="title">Translations Dashboard</h1>
 
-    <h1 class="title">Translations Dashboard</h1>
-
-    <div class="controls">
-      <select id="program" class="select">
-        <option value="all">All Programs</option>
-      </select>
-
-      <select id="status" class="select">
-        <option value="all">All Statuses</option>
-        <option value="Completed">Completed</option>
-        <option value="In Progress">In Progress</option>
-        <option value="Pending">Pending</option>
-      </select>
-
-      <input id="search" class="search" type="search" placeholder="Search title, program, language…" />
-    </div>
-
-    <div id="summary" class="muted" style="margin:6px 0 16px;"></div>
-
-    <div id="grid" class="grid"></div>
+  <div class="controls">
+    <select id="program" class="select"><option value="all">All Programs</option></select>
+    <select id="status" class="select">
+      <option value="all">All Statuses</option>
+      <option value="Completed">Completed</option>
+      <option value="In Progress">In Progress</option>
+      <option value="Pending">Pending</option>
+    </select>
+    <input id="search" class="search" type="search" placeholder="Search title, program, language…" />
   </div>
+
+  <div id="summary" class="summaryGrid"></div>
+  <div id="grid" class="grid"></div>
+</div>
 
 <script>
 (async function(){
-  // load the JSON generated by the workflow
-  const res = await fetch('./translations.json', {cache:'no-store'});
+  const res = await fetch('./translations.json',{cache:'no-store'});
   const data = await res.json();
 
-  const $grid = document.getElementById('grid');
-  const $program = document.getElementById('program');
-  const $status = document.getElementById('status');
-  const $search = document.getElementById('search');
-  const $summary = document.getElementById('summary');
+  const $grid=document.getElementById('grid');
+  const $program=document.getElementById('program');
+  const $status=document.getElementById('status');
+  const $search=document.getElementById('search');
+  const $summary=document.getElementById('summary');
 
-  // Build program list
-  const programs = Array.from(new Set(data.map(d => d.program).filter(Boolean))).sort();
-  programs.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p; opt.textContent = p;
-    $program.appendChild(opt);
-  });
+  const programs=[...new Set(data.map(d=>d.program).filter(Boolean))].sort();
+  programs.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;$program.appendChild(o)});
 
-  function statusClass(s){
-    const v = (s||'').toLowerCase();
-    if (v.includes('complete')) return 'pill pill--completed';
-    if (v.includes('progress')) return 'pill pill--inprogress';
-    return 'pill pill--pending';
-  }
+  function statusClass(s){const v=(s||'').toLowerCase();if(v.includes('complete'))return'pill pill--completed';if(v.includes('progress'))return'pill pill--inprogress';return'pill pill--pending'}
 
-  function matchesText(d, q){
-    if(!q) return true;
-    q = q.toLowerCase();
-    return [d.title, d.program, d.language, d.status].some(x => (x||'').toLowerCase().includes(q));
-  }
+  function matches(d,q){if(!q)return true;q=q.toLowerCase();return[d.title,d.program,d.language,d.status].some(x=>(x||'').toLowerCase().includes(q))}
 
   function render(){
-    const p = $program.value;
-    const s = $status.value;
-    const q = $search.value.trim();
+    const p=$program.value,s=$status.value,q=$search.value.trim();
+    const filtered=data.filter(d=>(p==='all'||d.program===p)&&(s==='all'||(d.status||'').toLowerCase()===s.toLowerCase())&&matches(d,q));
 
-    const filtered = data.filter(d =>
-      (p==='all' || d.program===p) &&
-      (s==='all' || (d.status||'').toLowerCase()===s.toLowerCase()) &&
-      matchesText(d,q)
-    );
+    // summary stats
+    const total=filtered.length;
+    const completed=filtered.filter(d=>(d.status||'').toLowerCase()==='completed').length;
+    const inprog=filtered.filter(d=>(d.status||'').toLowerCase()==='in progress').length;
+    const pending=filtered.filter(d=>(d.status||'').toLowerCase()==='pending').length;
 
-    $summary.textContent = `${filtered.length} of ${data.length} requests`;
+    $summary.innerHTML=`
+      <div class="summaryCard"><h4>Total</h4><div>${total}</div></div>
+      <div class="summaryCard"><h4>Completed</h4><div style="color:var(--status-completed-text)">${completed}</div></div>
+      <div class="summaryCard"><h4>In Progress</h4><div style="color:var(--status-inprogress-text)">${inprog}</div></div>
+      <div class="summaryCard"><h4>Pending</h4><div style="color:var(--status-pending-text)">${pending}</div></div>
+    `;
 
-    $grid.innerHTML = '';
-    filtered.forEach(d => {
-      const card = document.createElement('div');
-      card.className = 'card';
-
-      card.innerHTML = `
-        <h3>${d.title || 'Untitled'}</h3>
-        <div class="sub">${d.program || '—'} • ${d.language || '—'}</div>
-        <div class="row"><span class="${statusClass(d.status)}">${d.status || 'Pending'}</span></div>
-        <div class="row"><span class="muted">Requested:</span> <strong>${d.dateRequested || '—'}</strong></div>
-        <div class="row"><span class="muted">Deadline:</span> <strong>${d.deadline || d.date || '—'}</strong></div>
+    $grid.innerHTML='';
+    filtered.forEach(d=>{
+      const card=document.createElement('div');card.className='card';
+      card.innerHTML=`
+        <h3>${d.title||'Untitled'}</h3>
+        <div class="sub">${d.program||'—'} • ${d.language||'—'}</div>
+        <div class="row"><span class="${statusClass(d.status)}">${d.status||'Pending'}</span></div>
+        <div class="row"><span class="muted">Requested:</span><strong>${d.dateRequested||'—'}</strong></div>
+        <div class="row"><span class="muted">Deadline:</span><strong>${d.deadline||d.date||'—'}</strong></div>
         <div style="margin-top:10px;">
-          ${d.link ? `<a class="btn" href="${d.link}" target="_blank" rel="noopener">View File</a>` :
-            `<button class="btn" disabled>No link available</button>`}
-        </div>
-      `;
+          ${d.link?`<a class="btn" href="${d.link}" target="_blank">View File</a>`:`<button class="btn" disabled>No link</button>`}
+        </div>`;
       $grid.appendChild(card);
     });
   }
 
-  $program.addEventListener('change', render);
-  $status.addEventListener('change', render);
-  $search.addEventListener('input', render);
-
+  $program.onchange=$status.onchange=$search.oninput=render;
   render();
 })();
 </script>
