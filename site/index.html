@@ -1,171 +1,229 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Language Services · Translations</title>
-<style>
-  /* ==== BRAND COLORS (edit these three to match your brand) ==== */
-  :root{
-    --brand-bg-start:#0b3b74;   /* deep navy */
-    --brand-bg-end:#6a2c91;     /* purple */
-    --brand-accent:#5eead4;     /* teal accent */
-    --text:#e6eef8;
-    --muted:#9fb3c8;
-    --card:rgba(255,255,255,.06);
-    --card-border:rgba(255,255,255,.14);
-    --chip:rgba(255,255,255,.12);
-  }
-
-  /* ==== Base layout ==== */
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;
-    font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif;
-    color:var(--text);
-    background:linear-gradient(140deg,var(--brand-bg-start),var(--brand-bg-end));
-    background-attachment:fixed;
-  }
-  .container{max-width:1200px;margin:0 auto;padding:24px}
-  a{color:var(--brand-accent);text-decoration:none}
-
-  /* ==== Header / toolbar ==== */
-  .topbar{
-    position:sticky;top:0;z-index:40;
-    backdrop-filter:saturate(180%) blur(8px);
-    background:linear-gradient(140deg,var(--brand-bg-start),var(--brand-bg-end));
-    border-bottom:1px solid var(--card-border);
-  }
-  .row{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
-  .space{flex:1}
-  .title{font-weight:700;font-size:20px;letter-spacing:.2px}
-  .pill{
-    display:inline-flex;align-items:center;gap:6px;
-    padding:6px 10px;border-radius:999px;
-    border:1px solid var(--card-border);background:var(--chip);color:var(--text);font-size:12px
-  }
-  .input, select{
-    background:var(--card);border:1px solid var(--card-border);color:var(--text);
-    border-radius:10px;padding:10px 12px;outline:0;min-width:180px
-  }
-  .search{min-width:260px;flex:1}
-  .btn{
-    appearance:none;border:1px solid var(--card-border);background:var(--chip);color:var(--text);
-    border-radius:10px;padding:10px 12px;cursor:pointer
-  }
-  .btn:hover{border-color:#ffffff38}
-
-  /* ==== Cards grid ==== */
-  .grid{
-    display:grid;gap:16px;margin-top:18px;
-    grid-template-columns:repeat(auto-fill,minmax(300px,1fr))
-  }
-  .card{
-    background:var(--card);border:1px solid var(--card-border);
-    border-radius:16px;padding:16px
-  }
-  .card h3{margin:0 0 6px 0;font-size:16px}
-  .sub{color:var(--muted);font-size:13px}
-  .row-between{display:flex;justify-content:space-between;gap:8px}
-  .chip{
-    border:1px solid var(--card-border);background:var(--chip);padding:4px 10px;border-radius:999px;font-size:12px
-  }
-  .footer{margin-top:22px;font-size:13px;color:var(--muted)}
-  .counts{display:flex;gap:10px;flex-wrap:wrap}
-  .count{
-    background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:8px 12px;font-size:13px
-  }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Language Services Dashboards</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <div class="topbar">
-    <div class="container row" style="padding:12px 24px">
-      <div class="title">Language Services — Translations</div>
-      <span id="lastUpdated" class="pill">Last updated: —</span>
-      <div class="space"></div>
-      <input id="q" class="input search" placeholder="Search title, program, language…" />
-      <select id="programSel" title="Program"></select>
-      <select id="statusSel" title="Status"></select>
-      <a class="btn" href="./interpretation.html" title="Go to Interpretation">Interpretation →</a>
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <header class="mb-8">
+      <h1 class="text-3xl font-bold tracking-tight">Language Services Dashboards</h1>
+      <p class="text-slate-600 mt-1">Translations & Interpretation (live from Google Sheets)</p>
+    </header>
+
+    <!-- Controls -->
+    <div class="grid gap-3 md:grid-cols-3 mb-6">
+      <div class="md:col-span-1">
+        <label class="text-sm font-medium text-slate-700">Search</label>
+        <input id="searchInput" type="text" placeholder="Search title, program, language…"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+      <div>
+        <label class="text-sm font-medium text-slate-700">Program</label>
+        <select id="programFilter"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="all">All programs</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-sm font-medium text-slate-700">Status</label>
+        <select id="statusFilter"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="all">All statuses</option>
+          <option value="Completed">Completed</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
     </div>
+
+    <!-- Tabs -->
+    <div class="flex items-center border-b border-slate-200 mb-4">
+      <button id="tabTranslations" class="px-4 py-2 -mb-px border-b-2 border-blue-600 text-blue-700 font-medium">
+        Translations
+      </button>
+      <button id="tabInterpretation" class="px-4 py-2 text-slate-600 hover:text-slate-900">
+        Interpretation
+      </button>
+    </div>
+
+    <!-- Summary -->
+    <div class="grid gap-3 grid-cols-2 md:grid-cols-4 mb-6" id="summaryBar"></div>
+
+    <!-- Lists -->
+    <div id="listContainer" class="space-y-3"></div>
   </div>
 
-  <div class="container">
-    <div class="counts" id="counts"></div>
-    <div id="cards" class="grid"></div>
-    <div class="footer">Tip: use the search to filter across <em>Title • Program • Language • Status</em>.</div>
-  </div>
+  <script>
+    // --- helpers ---
+    async function fetchJSONWithFallback(paths) {
+      for (const p of paths) {
+        try {
+          const r = await fetch(p, { cache: 'no-store' });
+          if (r.ok) return await r.json();
+        } catch(_) {}
+      }
+      return [];
+    }
 
-<script>
-(async function(){
-  // Load data
-  const res = await fetch('./translations.json',{cache:'no-store'});
-  const data = await res.json();
+    function statusClasses(status) {
+      const s = (status || '').toLowerCase();
+      if (s === 'completed') return 'bg-green-100 text-green-800 ring-1 ring-inset ring-green-200';
+      if (s === 'in progress') return 'bg-yellow-100 text-yellow-900 ring-1 ring-inset ring-yellow-200';
+      // default -> Pending red
+      return 'bg-red-100 text-red-800 ring-1 ring-inset ring-red-200';
+    }
 
-  // Elements
-  const lastUpdated = document.getElementById('lastUpdated');
-  const q = document.getElementById('q');
-  const programSel = document.getElementById('programSel');
-  const statusSel = document.getElementById('statusSel');
-  const cards = document.getElementById('cards');
-  const counts = document.getElementById('counts');
+    function bySearch(text, q) {
+      if (!q) return true;
+      return (text || '').toLowerCase().includes(q.toLowerCase());
+    }
 
-  lastUpdated.textContent = 'Last updated: ' + new Date().toLocaleString();
+    // --- state ---
+    let translations = [];
+    let interpretation = [];
+    let activeTab = 'translations';
 
-  // Build filter options
-  const programs = ['All programs', ...Array.from(new Set(data.map(d=>d.program).filter(Boolean))).sort()];
-  const statuses = ['All status', ...Array.from(new Set(data.map(d=>d.status).filter(Boolean))).sort()];
+    const searchInput = document.getElementById('searchInput');
+    const programFilter = document.getElementById('programFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const listContainer = document.getElementById('listContainer');
+    const summaryBar = document.getElementById('summaryBar');
 
-  programSel.innerHTML = programs.map(v=>`<option>${v}</option>`).join('');
-  statusSel.innerHTML = statuses.map(v=>`<option>${v}</option>`).join('');
+    const tabTranslations = document.getElementById('tabTranslations');
+    const tabInterpretation = document.getElementById('tabInterpretation');
 
-  // Filter + search
-  const norm = s => (s||'').toString().toLowerCase();
-  function pass(d){
-    const s = norm(q.value);
-    const bySearch = !s || [d.title,d.program,d.language,d.status].some(x=>norm(x).includes(s));
-    const byProgram = programSel.value==='All programs' || d.program===programSel.value;
-    const byStatus = statusSel.value==='All status' || d.status===statusSel.value;
-    return bySearch && byProgram && byStatus;
-  }
+    tabTranslations.onclick = () => {
+      activeTab = 'translations';
+      tabTranslations.className = 'px-4 py-2 -mb-px border-b-2 border-blue-600 text-blue-700 font-medium';
+      tabInterpretation.className = 'px-4 py-2 text-slate-600 hover:text-slate-900';
+      render();
+    };
+    tabInterpretation.onclick = () => {
+      activeTab = 'interpretation';
+      tabInterpretation.className = 'px-4 py-2 -mb-px border-b-2 border-blue-600 text-blue-700 font-medium';
+      tabTranslations.className = 'px-4 py-2 text-slate-600 hover:text-slate-900';
+      render();
+    };
 
-  function render(){
-    const rows = data.filter(pass);
+    searchInput.oninput = programFilter.onchange = statusFilter.onchange = render;
 
-    // counts
-    const total = data.length;
-    const completed = data.filter(x=>norm(x.status)==='completed').length;
-    const inprog = data.filter(x=>norm(x.status)==='in progress').length;
-    const pending = data.filter(x=>norm(x.status)==='pending').length;
-    counts.innerHTML = `
-      <div class="count">Showing <b>${rows.length}</b> of ${total}</div>
-      <div class="count">Completed: <b>${completed}</b></div>
-      <div class="count">In progress: <b>${inprog}</b></div>
-      <div class="count">Pending: <b>${pending}</b></div>
-    `;
+    function buildPrograms(items) {
+      const set = new Set(items.map(i => i.program).filter(Boolean));
+      programFilter.innerHTML = '<option value="all">All programs</option>' +
+        Array.from(set).sort().map(p => `<option value="${p}">${p}</option>`).join('');
+    }
 
-    // cards
-    cards.innerHTML = rows.map(d=>`
-      <article class="card">
-        <div class="row-between">
-          <h3>${d.title || '(Untitled)'}</h3>
-          <span class="chip">${d.status || ''}</span>
+    function renderSummary(items) {
+      const total = items.length;
+      const completed = items.filter(i => (i.status || '').toLowerCase() === 'completed').length;
+      const inprog = items.filter(i => (i.status || '').toLowerCase() === 'in progress').length;
+      const pending = items.filter(i => (i.status || '').toLowerCase() === 'pending').length;
+
+      summaryBar.innerHTML = `
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+          <div class="text-sm text-slate-500">Total</div>
+          <div class="text-2xl font-semibold">${total}</div>
         </div>
-        <div class="sub">${d.program || ''} • ${d.language || ''}</div>
-        <div class="sub">Requested: ${d.dateRequested || '—'} • Deadline: ${d.deadline || '—'}</div>
-        ${d.link ? `<div style="margin-top:10px"><a class="btn" target="_blank" href="${d.link}">Open file</a></div>`:''}
-      </article>
-    `).join('');
-  }
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+          <div class="text-sm text-slate-500">Completed</div>
+          <div class="text-2xl font-semibold text-green-700">${completed}</div>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+          <div class="text-sm text-slate-500">In Progress</div>
+          <div class="text-2xl font-semibold text-yellow-700">${inprog}</div>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+          <div class="text-sm text-slate-500">Pending</div>
+          <div class="text-2xl font-semibold text-red-700">${pending}</div>
+        </div>
+      `;
+    }
 
-  // Events (with small debounce for search)
-  let t; q.addEventListener('input',()=>{ clearTimeout(t); t=setTimeout(render,120); });
-  programSel.onchange = render;
-  statusSel.onchange = render;
+    function render() {
+      const q = searchInput.value.trim();
+      const program = programFilter.value;
+      const status = statusFilter.value;
 
-  render();
-})();
-</script>
+      const data = activeTab === 'translations' ? translations : interpretation;
+
+      let filtered = data.filter(item =>
+        bySearch(item.title, q) || bySearch(item.program, q) || bySearch(item.language || item.type, q)
+      );
+      if (program !== 'all') filtered = filtered.filter(i => i.program === program);
+      if (status !== 'all') filtered = filtered.filter(i => (i.status || '').toLowerCase() === status.toLowerCase());
+
+      buildPrograms(data);
+      renderSummary(filtered);
+
+      listContainer.innerHTML = filtered.map(item => {
+        const datePretty = item.date || item.eventDate || '';
+        const lang = item.language || item.type || '';
+        const title = item.title || item.eventName || '(Untitled)';
+        const link = item.link; // <-- Translations link (from "Completed Request Link")
+        const hasLink = !!(link && String(link).trim());
+
+        return `
+          <div class="rounded-xl border border-slate-200 bg-white p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-semibold text-lg">${escapeHtml(title)}</h3>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses(item.status)}">
+                  ${escapeHtml(item.status || 'Pending')}
+                </span>
+              </div>
+              <div class="mt-1 text-slate-600 text-sm">
+                <span class="font-medium">${escapeHtml(item.program || '—')}</span>
+                <span class="mx-2">•</span>
+                <span>${escapeHtml(lang || '—')}</span>
+                ${datePretty ? `<span class="mx-2">•</span><span>${escapeHtml(datePretty)}</span>` : ''}
+              </div>
+              ${item.dateRequested ? `<div class="text-slate-500 text-xs mt-1">Requested: ${escapeHtml(item.dateRequested)}</div>` : ''}
+            </div>
+            <div class="shrink-0">
+              ${hasLink
+                ? `<a href="${escapeAttr(link)}" target="_blank" rel="noopener"
+                      class="inline-flex items-center gap-2 rounded-lg bg-blue-600 text-white px-4 py-2 hover:bg-blue-700">
+                      View File
+                   </a>`
+                : `<span class="inline-flex items-center gap-2 rounded-lg bg-slate-100 text-slate-500 px-4 py-2">No link</span>`
+              }
+            </div>
+          </div>
+        `;
+      }).join('') || `
+        <div class="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+          No items match your filters.
+        </div>`;
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+    function escapeAttr(s) {
+      return String(s ?? '').replaceAll('"', '&quot;');
+    }
+
+    (async function init() {
+      // Try both locations so it works no matter where your workflow writes files
+      translations = await fetchJSONWithFallback(['./translations.json', './site/translations.json', '/site/translations.json']);
+      interpretation = await fetchJSONWithFallback(['./interpretation.json', './site/interpretation.json', '/site/interpretation.json']);
+
+      // Normalize status casing
+      const norm = s => (s || '').trim();
+      translations.forEach(t => t.status = norm(t.status));
+      interpretation.forEach(i => i.status = norm(i.status));
+
+      buildPrograms(translations);
+      render();
+    })();
+  </script>
 </body>
 </html>
