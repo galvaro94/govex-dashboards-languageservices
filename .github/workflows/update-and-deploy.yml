@@ -1,12 +1,13 @@
 name: UpdateDeploy
+
 on:
   workflow_dispatch:
   push:
     branches:
       - main
-  # To auto-update every 2 hours (UTC), uncomment:
-  # schedule:
-  #   - cron: "0 */2 * * *"
+  # Run every 15 minutes (UTC). We'll gate ET business hours in a step.
+  schedule:
+    - cron: "*/15 * * * *"
 
 jobs:
   build-deploy:
@@ -17,27 +18,58 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
 
+      # Gate scheduled runs to ET business hours (Mon–Fri 09:00–18:59).
+      # Scheduled runs outside this window will skip heavy steps.
+      # Push/manual runs always proceed.
+      - name: Compute ET business-hours window
+        id: window
+        shell: bash
+        run: |
+          export TZ="America/New_York"
+          day=$(date +%u)   # 1=Mon ... 7=Sun
+          hour=$(date +%H)  # 00..23
+
+          echo "Current ET: $(date)"
+          if [ "$day" -ge 1 ] && [ "$day" -le 5 ] && [ "$hour" -ge 9 ] && [ "$hour" -le 18 ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Within ET business hours."
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Outside ET business hours; scheduled run will be skipped."
+          fi
+
       - name: Install deps (API clients only)
+        if: steps.window.outputs.should_run == 'true' || github.event_name != 'schedule'
         run: npm install googleapis@131 google-auth-library@9.14.2
 
       - name: Build data & pages
+        if: steps.window.outputs.should_run == 'true' || github.event_name != 'schedule'
         env:
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
         run: node scripts/build.js
 
-      - uses: actions/configure-pages@v4
+      - name: Configure GitHub Pages
+        if: steps.window.outputs.should_run == 'true' || github.event_name != 'schedule'
+        uses: actions/configure-pages@v4
 
-      - uses: actions/upload-pages-artifact@v3
+      - name: Upload artifact
+        if: steps.window.outputs.should_run == 'true' || github.event_name != 'schedule'
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: site   # keep as-is (matches your build output)
 
-      - id: deploy
+      - name: Deploy to GitHub Pages
+        if: steps.window.outputs.should_run == 'true' || github.event_name != 'schedule'
+        id: deploy
         uses: actions/deploy-pages@v4
